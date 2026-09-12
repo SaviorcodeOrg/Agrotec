@@ -9,10 +9,10 @@
   forced-color-adjust: none;
   outline: none;
   width: 100%;
-  max-height: 500px;
+  max-height: max-content;
   min-height: 100px;
   box-sizing: border-box;
-  --grid-item-size: 200px;
+  --grid-item-size: 250px;
 
   &:has(.react-aria-GridListSection) {
     scroll-padding: 50px;
@@ -130,7 +130,7 @@
   box-sizing: border-box;
   padding-bottom: var(--spacing-4);
   background: var(--overlay-background);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 0.15);
+  box-shadow: 0 2px 8px rgba(15, 196, 60, 0.507);
   min-width: 0;
   max-width: 250px;
   overflow: clip;
@@ -139,7 +139,8 @@
   transition-property: scale;
   transition-duration: 200ms;
   -webkit-tap-highlight-color: transparent;
-
+border:4px green;
+margin: 5px;
   &[data-focus-visible] {
     outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
@@ -155,8 +156,8 @@
     inset: 0;
     pointer-events: none;
     border-radius: inherit;
-    border: 2px solid light-dark(black, white);
-    outline: 2px solid light-dark(rgb(255 255 255 / 0.7), rgb(0 0 0 / 0.7));
+    border: 2px solid light-dark(rgb(56, 129, 27), rgb(39, 165, 22));
+    outline: 2px solid light-dark(rgb(255 255 255 / 0.7), rgba(120, 255, 57, 0.7));
     outline-offset: -4px;
     opacity: 0;
     transition: opacity 200ms;
@@ -210,7 +211,7 @@
         content: "";
         position: absolute;
         inset: -4px;
-        background: light-dark(rgb(255 255 255 / 0.51), rgb(0 0 0 / 0.56));
+        background: light-dark(rgba(18, 161, 30, 0.51), rgb(0 0 0 / 0.56));
         box-shadow: rgba(0, 0, 0, 0.24) 0px 2px 8px 0px;
         border-radius: var(--radius);
       }
@@ -232,7 +233,8 @@
     display: -webkit-box;
     overflow: hidden;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+    line-clamp: 7;
+    -webkit-line-clamp: 7;
 
     &:not([slot]) {
       font-weight: 500;

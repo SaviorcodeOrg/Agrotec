@@ -1,5 +1,5 @@
-footer{
-     background: #16d939;
+footer {
+  background: #16d939;
   background: linear-gradient(
     90deg,
     rgba(22, 217, 57, 1) 0%,
@@ -10,28 +10,54 @@ footer{
   padding-bottom: 10%;
   display: block;
   position: relative;
- 
+
   font-size: 32px;
 }
-h1{
-    font-family: Cambria, Cochin, Georgia, Times, 'Times New Roman', serif;
+h1 {
+  font-family: Cambria, Cochin, Georgia, Times, "Times New Roman", serif;
 }
-#Textointroductorio{
-    color:#16d939;
-    position: absolute;
-    top:35%;
- text-shadow: 5px 4px 2px  black;
- 
+#Textointroductorio {
+  color: #16d939;
+  position: absolute;
+  top: 35%;
+  text-shadow: 5px 3px 2px rgb(9, 48, 18);
+  width: 100px;
+  background: #91ffa9;
+  background: linear-gradient(
+    90deg,
+    rgba(145, 255, 169, 1) 0%,
+    rgba(102, 237, 92, 1) 47%,
+    rgba(182, 217, 182, 1) 100%,
+    rgba(72, 87, 69, 1) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-.Intro{
-    position: relative;
-    display: inline-block;
+.Intro {
+  position: relative;
+  display: inline-block;
 }
-img{
-    display: block;
-    width: 100%;
-    opacity: 0.9;
-    box-shadow: 4px 8px 8px 8px black;
-    background-color: black;
-
+#introImg {
+  display: block;
+  width: 100%;
+  opacity: 0.9;
+  box-shadow: 4px 8px 8px 8px black;
+  background-color: black;
+}
+.ModalBackdrop {
+  background-color: aqua;
+  border: 2px green;
+}
+.ModalDesign {
+  background-color: aqua;
+  border: 2px green;
+}
+.Campos {
+  display: block;
+  margin-left: 20px;
+  margin-right: 20px;
+  margin-top: 50px;
+  border: 1px green solid;
+  box-shadow: #16d939 1px 2px 1px 1px;
+  padding: 5px;
 }

@@ -13,7 +13,7 @@ import {
 import { Checkbox } from "./Checkbox";
 import { GripVertical } from "lucide-react";
 
-import "./GridList.css";
+import "./Gridlist.css";
 
 export function GridList<T>({
   children,
