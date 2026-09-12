@@ -9,5 +9,12 @@ export default defineConfig({
     // (DNS-rebinding protection). This stack fronts the dev server with a
     // Cloudflare Tunnel hostname, so the Host header is never "localhost".
     allowedHosts: ['agrotec.saviorcode.com', 'gui', 'localhost'],
+    // Docker Desktop's Windows/WSL2 bind mount doesn't propagate inotify
+    // events, so Vite's default file watcher misses edits entirely (same
+    // root cause as nodemon needing legacyWatch on the backend) - polling
+    // is the reliable fallback.
+    watch: {
+      usePolling: true,
+    },
   },
 })

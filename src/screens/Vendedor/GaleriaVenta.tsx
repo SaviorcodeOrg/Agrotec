@@ -1,0 +1,264 @@
+import { useCallback, useEffect, useState } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+import { Button } from "../../components/Button";
+import { TextField, TextArea } from "../../components/Textfield";
+import "./GaleriaVenta.css";
+import "../Registro/RegistroWizard.css";
+
+const API_URL = "https://agrotecapi.saviorcode.com";
+
+interface Producto {
+  id: number;
+  Nombre_Producto: string;
+  Precio: number;
+  Cantidad_Disponible: number;
+  Descripcion: string | null;
+  Unidad_De_Venta: number | null;
+  MInimo_De_Compra: string | null;
+  Foto_Producto_URL: string | null;
+}
+
+const formularioInicial = {
+  Nombre_Producto: "",
+  Precio: "",
+  Cantidad_Disponible: "",
+  Descripcion: "",
+  Unidad_De_Venta: "",
+  MInimo_De_Compra: "",
+  Foto_Producto_URL: "",
+};
+
+export function GaleriaVenta() {
+  const { isAuthenticated, isLoading, loginWithRedirect, getAccessTokenSilently } =
+    useAuth0();
+  const [productos, setProductos] = useState<Producto[] | null>(null);
+  const [error, setError] = useState("");
+  const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [formulario, setFormulario] = useState(formularioInicial);
+  const [enviando, setEnviando] = useState(false);
+  const [errorFormulario, setErrorFormulario] = useState("");
+
+  const cargarProductos = useCallback(async () => {
+    setError("");
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch(`${API_URL}/api/mis-productos`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `Error HTTP ${res.status}`);
+      }
+
+      setProductos(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Error desconocido");
+    }
+  }, [getAccessTokenSilently]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      cargarProductos();
+    }
+  }, [isAuthenticated, cargarProductos]);
+
+  function actualizarCampo(campo: keyof typeof formularioInicial, valor: string) {
+    setFormulario((prev) => ({ ...prev, [campo]: valor }));
+  }
+
+  async function registrarProducto() {
+    setEnviando(true);
+    setErrorFormulario("");
+
+    try {
+      const token = await getAccessTokenSilently();
+      const res = await fetch(`${API_URL}/api/productos`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          Nombre_Producto: formulario.Nombre_Producto,
+          Precio: Number(formulario.Precio),
+          Cantidad_Disponible: Number(formulario.Cantidad_Disponible),
+          Descripcion: formulario.Descripcion || null,
+          Unidad_De_Venta: formulario.Unidad_De_Venta
+            ? Number(formulario.Unidad_De_Venta)
+            : null,
+          MInimo_De_Compra: formulario.MInimo_De_Compra || null,
+          Foto_Producto_URL: formulario.Foto_Producto_URL || null,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || `Error HTTP ${res.status}`);
+      }
+
+      setFormulario(formularioInicial);
+      setMostrarFormulario(false);
+      await cargarProductos();
+    } catch (err) {
+      setErrorFormulario(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  if (isLoading) {
+    return <div className="galeria-fondo" />;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="wizard-fondo">
+        <div className="wizard-tarjeta-contenedor">
+          <div className="wizard-card">
+            <h1>Primero inicia sesion</h1>
+            <p className="wizard-subtitulo">
+              Necesitas iniciar sesion con tu cuenta de Vendedor para ver tu
+              galeria de venta.
+            </p>
+            <div className="wizard-acciones">
+              <Button
+                onPress={() =>
+                  loginWithRedirect({ appState: { returnTo: "/Vender" } })
+                }
+              >
+                Iniciar sesion
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="galeria-fondo">
+      <div className="galeria-header">
+        <h1>Mi galeria de venta</h1>
+        <Button onPress={() => setMostrarFormulario((v) => !v)}>
+          {mostrarFormulario ? "Cancelar" : "+ Registrar producto"}
+        </Button>
+      </div>
+
+      {mostrarFormulario && (
+        <div className="wizard-tarjeta-contenedor" style={{ margin: "0 auto 32px" }}>
+          <div className="wizard-card">
+            <h1>Registrar producto</h1>
+            <p className="wizard-subtitulo">
+              Este producto se agrega a tu catalogo de venta. Si el stock
+              llega a 0, deja de aparecer en el catalogo publico.
+            </p>
+
+            <TextField
+              label="Nombre del producto"
+              placeholder="Tomate"
+              value={formulario.Nombre_Producto}
+              onChange={(v) => actualizarCampo("Nombre_Producto", v)}
+              isRequired
+            />
+            <TextField
+              label="Precio"
+              type="number"
+              placeholder="25"
+              value={formulario.Precio}
+              onChange={(v) => actualizarCampo("Precio", v)}
+              isRequired
+            />
+            <TextField
+              label="Cantidad disponible"
+              type="number"
+              placeholder="100"
+              value={formulario.Cantidad_Disponible}
+              onChange={(v) => actualizarCampo("Cantidad_Disponible", v)}
+              isRequired
+            />
+            <TextField
+              label="Unidad de venta (opcional)"
+              placeholder="1 (kg, por ejemplo)"
+              type="number"
+              value={formulario.Unidad_De_Venta}
+              onChange={(v) => actualizarCampo("Unidad_De_Venta", v)}
+            />
+            <TextField
+              label="Minimo de compra (opcional)"
+              placeholder="1 kg"
+              value={formulario.MInimo_De_Compra}
+              onChange={(v) => actualizarCampo("MInimo_De_Compra", v)}
+            />
+            <TextArea
+              label="Descripcion (opcional)"
+              placeholder="Tomate rojo fresco, cosechado esta semana"
+              value={formulario.Descripcion}
+              onChange={(v) => actualizarCampo("Descripcion", v)}
+            />
+            <TextField
+              label="URL de foto (opcional)"
+              placeholder="https://..."
+              value={formulario.Foto_Producto_URL}
+              onChange={(v) => actualizarCampo("Foto_Producto_URL", v)}
+            />
+
+            {errorFormulario && (
+              <p className="wizard-error-inline">{errorFormulario}</p>
+            )}
+
+            <div className="wizard-acciones">
+              <Button
+                onPress={registrarProducto}
+                isDisabled={
+                  enviando ||
+                  !formulario.Nombre_Producto ||
+                  !formulario.Precio ||
+                  !formulario.Cantidad_Disponible
+                }
+              >
+                {enviando ? "Guardando..." : "Guardar producto"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="wizard-error-inline">{error}</p>}
+
+      {productos && productos.length === 0 && (
+        <p className="galeria-vacia">
+          Todavia no has registrado ningun producto.
+        </p>
+      )}
+
+      <div className="galeria-grid">
+        {productos?.map((producto) => (
+          <div className="producto-card" key={producto.id}>
+            {producto.Foto_Producto_URL ? (
+              <img
+                className="producto-imagen"
+                src={producto.Foto_Producto_URL}
+                alt={producto.Nombre_Producto}
+              />
+            ) : (
+              <div className="producto-imagen-placeholder">Sin foto</div>
+            )}
+            <div className="producto-info">
+              <h3>{producto.Nombre_Producto}</h3>
+              <span className="producto-precio">${producto.Precio}</span>
+              {producto.Cantidad_Disponible > 0 ? (
+                <span className="producto-stock">
+                  {producto.Cantidad_Disponible} disponibles
+                </span>
+              ) : (
+                <span className="producto-agotado">Agotado</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -7,6 +7,7 @@ import { VerMas } from './screens/VerMas'
 import { CrearCuenta} from './screens/CrearCuenta'
 import { SignInComprador } from './screens/Comprador/SignInComprador'
 import { SignInVendedor } from './screens/Vendedor/SignInVendedor'
+import { GaleriaVenta } from './screens/Vendedor/GaleriaVenta'
 import { motion } from 'motion/react'
 
 // Envuelve Auth0Provider aqui (dentro de BrowserRouter, no en main.tsx) para
@@ -23,6 +24,18 @@ function Auth0ProviderConNavegacion({ children }: { children: ReactNode }) {
         redirect_uri: window.location.origin,
         audience: "https://agrotecapi.saviorcode.com/",
       }}
+      // Default (in-memory) cache needs a cross-origin iframe silent-auth
+      // check on every fresh page load to know if the user's still logged
+      // in - if third-party cookies are restricted that check can hang
+      // forever, leaving isLoading stuck true. localStorage persists the
+      // session across reloads without needing that check.
+      cacheLocation="localstorage"
+      // The silent-auth iframe check defaults to a 60s timeout before
+      // giving up - if it's ever going to fail (blocked cookies, etc.)
+      // that's a full minute of the app looking frozen. Fail fast instead;
+      // the worst case is an already-logged-in user has to click "Iniciar
+      // sesion" once more, not a real problem.
+      authorizeTimeoutInSeconds={5}
       onRedirectCallback={(appState) => {
         navigate(appState?.returnTo || '/')
       }}
@@ -66,6 +79,7 @@ return(
   <motion.nav>
 <Link to= '/'  className="nav-link">Regresar a Inicio </Link>
 <Link to='/VerMas' className="nav-link">Ver mas</Link>
+<Link to='/Vender' className="nav-link">Vender</Link>
 <BotonSesion />
   </motion.nav>
   <Routes>
@@ -74,6 +88,7 @@ return(
     <Route path="/VerMas" element={<VerMas/>}/>
     <Route path="/RegistrarComprador" element={<SignInComprador/>}/>
     <Route path="/RegistrarVendedor" element={<SignInVendedor/>}/>
+    <Route path="/Vender" element={<GaleriaVenta/>}/>
   </Routes>
   </Auth0ProviderConNavegacion>
   </BrowserRouter>
