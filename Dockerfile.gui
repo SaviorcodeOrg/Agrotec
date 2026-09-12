@@ -1,0 +1,23 @@
+# Dockerfile.gui - development image for the Vite/React frontend
+# (github.com/SaviorcodeOrg/Agrotec).
+#
+# Unlike Dockerfile (the backend), this image does NOT bake in any source
+# code - gui-entrypoint.sh clones the repo on first start and `git pull`s it
+# on every subsequent start, so it always runs the latest commit without
+# needing a rebuild. Source lives in the ./gui bind mount, kept separate
+# from the backend's ./src.
+
+FROM node:22-alpine
+
+# tini for clean signal handling (see Dockerfile for the full rationale);
+# git so the entrypoint can clone/pull the GUI repo at container start.
+RUN apk add --no-cache tini git
+
+WORKDIR /app
+
+COPY gui-entrypoint.sh /usr/local/bin/gui-entrypoint.sh
+RUN chmod +x /usr/local/bin/gui-entrypoint.sh
+
+EXPOSE 5173
+
+ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/gui-entrypoint.sh"]

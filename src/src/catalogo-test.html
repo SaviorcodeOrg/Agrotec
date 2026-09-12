@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Probar Catalogo</title>
+</head>
+<body>
+<h1>Catalogo (texto plano)</h1>
+<p>Llama a GET /api/productos y muestra la respuesta tal cual, sin estilos.</p>
+<pre id="resultado">Cargando...</pre>
+
+<script>
+  fetch('/api/productos')
+    .then((r) => r.text())
+    .then((texto) => {
+      document.getElementById('resultado').textContent = texto
+    })
+    .catch((err) => {
+      document.getElementById('resultado').textContent = 'Error: ' + err.message
+    })
+</script>
+</body>
+</html>

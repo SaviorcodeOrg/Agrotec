@@ -1,0 +1,25 @@
+# Secrets - never commit real environment values
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+logs/
+*.log
+
+# OS/editor cruft
+.DS_Store
+.vscode/
+.idea/
+
+# Docker Compose override you might create locally
+docker-compose.override.yml
+
+# GUI (github.com/SaviorcodeOrg/Agrotec) is git-cloned into here at
+# container start by gui-entrypoint.sh - it's a separate repo, not part of
+# this one.
+/gui/

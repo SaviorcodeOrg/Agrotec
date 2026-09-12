@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Probar API</title>
+<style>
+  body { font-family: sans-serif; max-width: 500px; margin: 40px auto; padding: 0 16px; }
+  label { display: block; margin-top: 10px; font-size: 14px; }
+  input, select { width: 100%; padding: 6px; margin-top: 2px; box-sizing: border-box; }
+  button { margin-top: 16px; padding: 8px 16px; cursor: pointer; }
+  pre { background: #eee; padding: 10px; white-space: pre-wrap; word-break: break-all; }
+</style>
+</head>
+<body>
+  <h1>Probar /register</h1>
+
+  <label>
+    Tipo
+    <select id="vendedor">
+      <option value="true">Vendedor</option>
+      <option value="false">Comprador</option>
+    </select>
+  </label>
+
+  <label>Username <input id="Username" value="usuario_prueba"></label>
+  <label>Nombre <input id="Nombre" value="Nombre Prueba"></label>
+  <label>Email <input id="Email" value="prueba@test.com"></label>
+  <label>Telefono <input id="Telefono" value="555-0000"></label>
+
+  <div id="camposVendedor">
+    <label>Nombre_completo <input id="Nombre_completo" value="Nombre Prueba"></label>
+    <label>Nombre_Negocio <input id="Nombre_Negocio" value="Mi Tienda"></label>
+    <label>Ubicaion_Aproximada <input id="Ubicaion_Aproximada" value="Monterrey"></label>
+  </div>
+
+  <div id="camposComprador" style="display:none">
+    <label>Nombre_Completo <input id="Nombre_Completo" value="Nombre Prueba"></label>
+    <label>A_Quien_Compro <input id="A_Quien_Compro" value=""></label>
+    <label>Modalidad_De_Entrega <input id="Modalidad_De_Entrega" value=""></label>
+  </div>
+
+  <button onclick="probar()">Enviar</button>
+
+  <pre id="resultado"></pre>
+
+<script>
+  const vendedorSelect = document.getElementById('vendedor')
+  vendedorSelect.addEventListener('change', () => {
+    const esVendedor = vendedorSelect.value === 'true'
+    document.getElementById('camposVendedor').style.display = esVendedor ? 'block' : 'none'
+    document.getElementById('camposComprador').style.display = esVendedor ? 'none' : 'block'
+  })
+
+  async function probar() {
+    const esVendedor = vendedorSelect.value === 'true'
+
+    const body = {
+      vendedor: esVendedor,
+      Username: document.getElementById('Username').value,
+      Nombre: document.getElementById('Nombre').value,
+      Email: document.getElementById('Email').value,
+      Telefono: document.getElementById('Telefono').value,
+    }
+
+    if (esVendedor) {
+      body.Nombre_completo = document.getElementById('Nombre_completo').value
+      body.Nombre_Negocio = document.getElementById('Nombre_Negocio').value
+      body.Ubicaion_Aproximada = document.getElementById('Ubicaion_Aproximada').value
+    } else {
+      body.Nombre_Completo = document.getElementById('Nombre_Completo').value
+      body.A_Quien_Compro = document.getElementById('A_Quien_Compro').value
+      body.Modalidad_De_Entrega = document.getElementById('Modalidad_De_Entrega').value
+    }
+
+    document.getElementById('resultado').textContent = 'Enviando...'
+
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      const data = await res.json()
+      document.getElementById('resultado').textContent = res.status + '\n' + JSON.stringify(data, null, 2)
+    } catch (err) {
+      document.getElementById('resultado').textContent = 'Error: ' + err.message
+    }
+  }
+</script>
+</body>
+</html>

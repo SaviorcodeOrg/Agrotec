@@ -1,0 +1,28 @@
+{
+  "name": "docker-dev-placeholder",
+  "version": "1.0.0",
+  "description": "Placeholder Node.js app (ESM) for the Dockerized dev stack: Node + Postgres + pgAdmin + Cloudflare Tunnel + Tailscale",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-oauth2-jwt-bearer": "^1.6.0",
+    "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "nodemonConfig": {
+    "legacyWatch": true
+  }
+}

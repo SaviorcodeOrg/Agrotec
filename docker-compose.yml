@@ -1,0 +1,319 @@
+networks:
+  # app <-> postgres <-> meta. Marked `internal: true` so Docker adds no
+  # default route to the outside world for anything attached to it (defense
+  # in depth on top of simply not publishing ports).
+  internal:
+    driver: bridge
+    internal: true
+  # cloudflared <-> app <-> gui. Not internal, because cloudflared needs to
+  # reach Cloudflare's edge over the public internet; app also sits on
+  # `internal` to reach postgres. Postgres, meta, and studio are never
+  # attached to this network, so cloudflared has no path to any of them.
+  edge:
+    driver: bridge
+  # Outbound-only path for Studio (and, since it shares Studio's network
+  # namespace, the tailscale sidecar). Tailscale needs real internet access
+  # to reach Tailscale's coordination/DERP servers - `internal` deliberately
+  # has none, so without this network the sidecar can register, but never
+  # actually connect. Postgres, meta, and cloudflared are never attached to
+  # this network: it grants an egress path, not an inbound one, and it's
+  # separate from `edge` so studio and cloudflared never share a network.
+  tailnet_egress:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  tailscale_data:
+
+services:
+  # ---------------------------------------------------------------------
+  # Node.js app - reachable ONLY via cloudflared (edge network) and, at your
+  # option, a host-bound port for local debugging (commented out below).
+  # ---------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+      # Your own app's env file - keeps app-specific secrets (NESSIE_KEY,
+      # etc.) separate from this scaffold's infra secrets in the root .env.
+      # Compose reads this from the host, so it works even though nothing
+      # in the Node code calls dotenv - values just land in process.env
+      # before the container starts. Later files here override earlier
+      # ones for any key defined in both. `required: false` because a
+      # file-sync tool has repeatedly deleted this file - without it, a
+      # missing file here would fail `docker compose up` for the whole
+      # stack rather than just leaving these particular vars unset.
+      - path: ./src/.env
+        required: false
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      # Always the Compose service name, never localhost - see PostgreSQL
+      # networking requirements.
+      PGHOST: postgres
+      PGPORT: 5432
+      # SSH login for editing ./src remotely - see docker-entrypoint.sh and
+      # tailscale/serve-config.json's TCP forward (:2222 -> app:22). Reachable
+      # over the tailnet only, never published to the host or the tunnel.
+      APP_SSH_USER: ${APP_SSH_USER}
+      APP_SSH_PASSWORD: ${APP_SSH_PASSWORD}
+    volumes:
+      # Bind-mount source for hot reload...
+      - ./:/usr/src/app
+      # ...but keep node_modules INSIDE the container. Without this, the
+      # bind mount above would overlay the host's (likely absent, or
+      # differently-built) node_modules over the one `npm install` created
+      # during the image build.
+      - /usr/src/app/node_modules
+    networks:
+      - internal
+      - edge
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    # For local debugging that bypasses the tunnel entirely (e.g. opening
+    # /test in a browser here). Loopback-only - not reachable from the
+    # network or the internet. Per the networking requirements, Node.js
+    # should otherwise be reachable publicly solely through Cloudflare
+    # Tunnel - comment this back out when you don't need local access.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  # ---------------------------------------------------------------------
+  # PostgreSQL - never published to the host. Only `app` and `meta`,
+  # both on the `internal` network, can reach it, at the service name
+  # "postgres" on 5432.
+  # ---------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Only runs on a brand-new (empty) data directory - see the manual
+      # apply step in README for the current volume, which already has data.
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    # Deliberately no `ports:` - do not publish 5432 to the host.
+
+  # ---------------------------------------------------------------------
+  # postgres-meta - the introspection/metadata API Supabase Studio talks to
+  # for its Table Editor, SQL Editor, and Database tabs. It is the ONLY
+  # thing in this stack that speaks the Postgres wire protocol on Studio's
+  # behalf; Studio itself never connects to `postgres` directly. Internal
+  # network only - nothing outside this stack can reach it, and it has no
+  # need for outbound internet.
+  # ---------------------------------------------------------------------
+  meta:
+    image: supabase/postgres-meta:v0.96.6
+    env_file:
+      - .env
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: postgres
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: ${POSTGRES_DB}
+      PG_META_DB_USER: ${POSTGRES_USER}
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      # Used by Supabase's Vault feature to encrypt secrets at rest. We
+      # don't use Vault here, but postgres-meta wants a 32+ char value
+      # present regardless. Not a real secret boundary in this setup.
+      # postgres-meta's own env var for this is CRYPTO_KEY (not
+      # PG_META_CRYPTO_KEY, despite every other var here using that
+      # prefix) - it must match Studio's PG_META_CRYPTO_KEY below, since
+      # Studio encrypts the connection string with it and meta decrypts
+      # it with this one. Mismatched keys surface as a "Malformed UTF-8
+      # data" error in meta's logs and a Zod validation error in Studio.
+      CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
+    networks:
+      - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      # postgres-meta ships no official healthcheck; this is a minimal
+      # "is the HTTP server up" probe (any response, even a 404, means the
+      # Node process is listening).
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    restart: unless-stopped
+    # Deliberately no `ports:` - never published to the host.
+
+  # ---------------------------------------------------------------------
+  # Supabase Studio - the pgAdmin replacement. Never published to the host
+  # and never on the `edge` network, so cloudflared has no route to it.
+  # Also on `tailnet_egress` purely so its shared-netns tailscale sidecar
+  # can reach the internet (see that network's comment above) - it grants
+  # no inbound path to Studio itself. The `tailscale` service below shares
+  # THIS container's network namespace, which is what makes Studio
+  # reachable from your tailnet - see the Tailscale section in README.md.
+  #
+  # This is "Studio-only" mode: just Studio + postgres-meta, talking to
+  # your existing Postgres. There's no Kong/Auth/Storage/Realtime/REST API
+  # in this stack (see README for the tradeoff), so Studio's Table Editor,
+  # SQL Editor, and Database tabs work; its API docs, Auth, and Storage
+  # tabs have nothing behind them and will show errors - that's expected,
+  # not a bug in this config.
+  # ---------------------------------------------------------------------
+  studio:
+    image: supabase/studio:2026.07.07-sha-a6a04f2
+    env_file:
+      - .env
+    environment:
+      HOSTNAME: "0.0.0.0"
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # The role Studio's SQL Editor runs queries as. Without this,
+      # Studio falls back to a hardcoded default ("supabase_admin") that
+      # only exists in the official supabase/postgres image's init
+      # scripts - our plain postgres:16-alpine only has ${POSTGRES_USER}.
+      POSTGRES_USER_READ_WRITE: ${POSTGRES_USER}
+      # Must match meta's CRYPTO_KEY above - Studio encrypts the
+      # connection string with this, meta decrypts it with that.
+      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY}
+      DEFAULT_ORGANIZATION_NAME: ${STUDIO_DEFAULT_ORGANIZATION:-Dev Organization}
+      DEFAULT_PROJECT_NAME: ${STUDIO_DEFAULT_PROJECT:-${POSTGRES_DB}}
+      # There is no Kong/API gateway in this stack, so these don't point at
+      # anything real - they exist only so Studio's UI doesn't crash
+      # rendering panels that expect them. The Table Editor/SQL
+      # Editor/Database tabs you'll actually use don't depend on these.
+      SUPABASE_URL: http://localhost:8000
+      SUPABASE_PUBLIC_URL: http://localhost:8000
+      JWT_SECRET: ${JWT_SECRET}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+      # Folder Studio reads/writes SQL Editor snippets to. Without this set,
+      # Studio logs a warning and snippets aren't persisted across restarts.
+      SNIPPETS_MANAGEMENT_FOLDER: /app/snippets
+    volumes:
+      - ./studio-snippets:/app/snippets
+    networks:
+      - internal
+      - tailnet_egress
+    depends_on:
+      meta:
+        condition: service_healthy
+    healthcheck:
+      # The same endpoint the official Supabase compose file uses.
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/api/platform/profile').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    # Deliberately no `ports:` - Studio must never be reachable directly
+    # from the host or the public internet, only through the Tailscale
+    # sidecar below.
+
+  # ---------------------------------------------------------------------
+  # GUI - Vite/React frontend (github.com/SaviorcodeOrg/Agrotec), kept in
+  # its own ./gui folder, entirely separate from the backend's ./src.
+  # gui-entrypoint.sh clones the repo on first start and `git pull`s it on
+  # every subsequent start, so it always runs the latest commit with no
+  # rebuild needed. It calls the backend API straight from the browser (over
+  # whatever public hostname you point at `app`), so this container itself
+  # only needs `edge` - not `internal` - to eventually get its own public
+  # Cloudflare Tunnel hostname the same way `app` does (add a second Public
+  # Hostname in the dashboard pointing at gui:5173; cloudflared's config
+  # here doesn't need to change for that, since routing lives in Cloudflare's
+  # dashboard, not in `command:`/`environment:` below).
+  # ---------------------------------------------------------------------
+  gui:
+    build:
+      context: .
+      dockerfile: Dockerfile.gui
+    volumes:
+      # Bind-mount so the cloned repo is visible on the host, in its own
+      # folder - kept separate from the backend's ./src on purpose.
+      - ./gui:/app
+      # ...but keep node_modules INSIDE the container, same reasoning as
+      # the backend's app service (see Dockerfile).
+      - /app/node_modules
+    networks:
+      - edge
+    restart: unless-stopped
+    # For local debugging - opening the Vite dev server directly, bypassing
+    # the tunnel. Loopback-only; comment out once you don't need it.
+    ports:
+      - "127.0.0.1:5173:5173"
+
+  # ---------------------------------------------------------------------
+  # Cloudflare Tunnel - the ONLY public entry point. Currently points at
+  # `app` alone (see the Cloudflare dashboard for the actual ingress
+  # rules) - add a second Public Hostname there for `gui` once you want it
+  # public too. Not attached to `internal`, so it has no network path to
+  # postgres, meta, or studio even if the tunnel token were compromised.
+  # ---------------------------------------------------------------------
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+      # This network's egress UDP (port 7844, used for QUIC) is blocked, so
+      # cloudflared was spending ~3 minutes retrying QUIC on every start
+      # before falling back to HTTP2 on its own. Pinning the protocol skips
+      # that retry loop and connects immediately.
+      TUNNEL_TRANSPORT_PROTOCOL: http2
+    networks:
+      - edge
+    depends_on:
+      - app
+    restart: unless-stopped
+    # Deliberately no `ports:` - cloudflared only makes OUTBOUND connections
+    # to Cloudflare's edge; nothing needs to be published on the host.
+
+  # ---------------------------------------------------------------------
+  # Tailscale sidecar - see README.md "Tailscale architecture" for the full
+  # explanation. In short: this container shares Studio's network
+  # namespace (network_mode: service:studio) instead of getting its own,
+  # so any port Studio listens on is reachable at this node's Tailscale
+  # IP/hostname. It never joins `internal` or `edge` directly, runs in
+  # Tailscale's default userspace networking mode (no NET_ADMIN, no
+  # /dev/net/tun, no --privileged), and only forwards the one path
+  # TS_SERVE_CONFIG names.
+  # ---------------------------------------------------------------------
+  tailscale:
+    image: tailscale/tailscale:latest
+    network_mode: "service:studio"
+    depends_on:
+      studio:
+        condition: service_healthy
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY}
+      TS_HOSTNAME: ${TS_HOSTNAME:-studio-dev}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve-config.json
+      TS_EXTRA_ARGS: --accept-dns=false
+    volumes:
+      - tailscale_data:/var/lib/tailscale
+      - ./tailscale/serve-config.json:/config/serve-config.json:ro
+    restart: unless-stopped
+    # No `ports:`, no `cap_add`, no `devices:` - TS_USERSPACE defaults to
+    # true, which is enough for `tailscale serve` to proxy a local port.
