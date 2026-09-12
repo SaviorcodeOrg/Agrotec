@@ -1,0 +1,24 @@
+nav {
+  background: #16d939;
+  background: linear-gradient(
+    90deg,
+    rgba(22, 217, 57, 1) 0%,
+    rgba(9, 99, 1, 1) 21%,
+    rgba(43, 163, 34, 1) 100%
+  );
+  color:white;
+
+}
+.nav-link{
+  color: rgb(255, 255, 255);
+  text-decoration: none;
+text-shadow: 2px 2px 2px #16d939;
+  margin: 5px;
+  position: relative;
+  float: right;
+  border-left: 1px white solid;
+  height: max-content;
+}
+.nav-link:hover{
+  color: chartreuse;
+}

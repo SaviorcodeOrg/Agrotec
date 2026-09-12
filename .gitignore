@@ -19,7 +19,4 @@ logs/
 # Docker Compose override you might create locally
 docker-compose.override.yml
 
-# GUI (github.com/SaviorcodeOrg/Agrotec) is git-cloned into here at
-# container start by gui-entrypoint.sh - it's a separate repo, not part of
-# this one.
-/gui/
+# GUI (gui/) is tracked in this same repo, under its own folder.
