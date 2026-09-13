@@ -105,6 +105,9 @@ function main(){
 
             res.status(201).json(result)
         } catch (err) {
+            if (err.code === '23505' && err.constraint === 'usuario_auth0sub_unique') {
+                return res.status(409).json({ error: 'Ya existe una cuenta registrada con este inicio de sesion' })
+            }
             console.error(err)
             res.status(500).json({ error: 'Failed to register usuario', details: err.message })
         }
@@ -245,6 +248,18 @@ function main(){
                 return res.status(404).send('Factura no encontrada')
             }
 
+            // El nickname codifica "producto||subtotal||impuesto" (ver
+            // comprar.js) para poder mostrar el desglose del 3% de
+            // impuesto Agrotec en el recibo - facturas de antes de ese
+            // cambio no tienen el separador, por eso el fallback.
+            const [descripcion, subtotalStr, impuestoStr] = factura.nickname.split('||')
+            const desglose = impuestoStr
+                ? `
+                    <p><strong>Subtotal:</strong> $${subtotalStr}</p>
+                    <p><strong>Impuesto Agrotec (3%):</strong> $${impuestoStr}</p>
+                  `
+                : ''
+
             res.type('html').send(`
                 <!doctype html>
                 <html lang="es">
@@ -252,8 +267,9 @@ function main(){
                 <body style="font-family: sans-serif; max-width: 400px; margin: 40px auto;">
                     <h1>Agrotec</h1>
                     <h2>Factura</h2>
-                    <p><strong>Producto:</strong> ${factura.nickname}</p>
-                    <p><strong>Monto:</strong> $${factura.payment_amount}</p>
+                    <p><strong>Producto:</strong> ${descripcion}</p>
+                    ${desglose}
+                    <p><strong>Total:</strong> $${factura.payment_amount}</p>
                     <p><strong>Fecha:</strong> ${factura.payment_date}</p>
                     <p><strong>Estado:</strong> ${factura.status}</p>
                     <p><small>ID: ${factura._id}</small></p>

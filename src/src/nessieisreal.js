@@ -163,6 +163,12 @@ class Nessie {
     }
 
     // --- Transfers -----------------------------------------------------
+    //
+    // No create_transfer_for_account here on purpose: this sandbox's
+    // TransferCreate schema is strict and rejects any field naming a
+    // destination account (medium, payee_id - tried both, both come back
+    // "extra fields not permitted"), so there's no way to actually direct
+    // a transfer to a specific account with this endpoint.
 
     get_transfer_by_id(transferId) {
         return web.get(

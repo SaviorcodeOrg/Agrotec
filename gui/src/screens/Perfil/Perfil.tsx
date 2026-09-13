@@ -1,53 +1,15 @@
-import { useEffect, useState } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/Button";
-import { useApiProtegida } from "../../hooks/useApiProtegida";
+import { usePerfil } from "../../hooks/usePerfil";
 import "../Registro/RegistroWizard.css";
-
-interface Usuario {
-  id: number;
-  Username: string;
-  Nombre: string;
-  Email: string | null;
-  Telefono: string | null;
-  id_Vendedor: string | null;
-  ID_comprador: string | null;
-}
 
 export function Perfil() {
   const { isAuthenticated, isLoading, loginWithRedirect, logout } = useAuth0();
-  const { llamar } = useApiProtegida();
   const navigate = useNavigate();
-  const [usuario, setUsuario] = useState<Usuario | null>(null);
-  const [noRegistrado, setNoRegistrado] = useState(false);
-  const [error, setError] = useState("");
+  const { usuario, noRegistrado, cargando } = usePerfil();
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    (async () => {
-      try {
-        const data = await llamar("/api/perfil");
-        setUsuario(data);
-      } catch (err) {
-        // /api/perfil responde 404 si el usuario ya inicio sesion con
-        // Auth0 pero todavia no completo el registro de Vendedor/Comprador
-        // - eso no es un error real, es un estado normal que hay que
-        // distinguir de una falla de verdad (por eso se revisa el status,
-        // no el texto del mensaje - mas resistente a que el backend
-        // cambie la redaccion exacta).
-        const status = (err as { status?: number })?.status;
-        if (status === 404) {
-          setNoRegistrado(true);
-        } else {
-          setError(err instanceof Error ? err.message : "Error desconocido");
-        }
-      }
-    })();
-  }, [isAuthenticated, llamar]);
-
-  if (isLoading) {
+  if (isLoading || cargando) {
     return <div className="wizard-fondo" />;
   }
 
@@ -101,8 +63,6 @@ export function Perfil() {
       <div className="wizard-tarjeta-contenedor">
         <div className="wizard-card">
           <h1>Mi perfil</h1>
-
-          {error && <p className="wizard-error-inline">{error}</p>}
 
           {usuario && (
             <>

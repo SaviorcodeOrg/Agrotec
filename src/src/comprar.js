@@ -2,6 +2,8 @@ import pool from './db.js'
 import nessie from './nessieisreal.js'
 import { elegirVendedor } from './elegirVendedor.js'
 
+const TASA_IMPUESTO = 0.03
+
 // Encuentra el ID_comprador ligado a un usuario ya autenticado con Auth0.
 async function obtenerCompradorId(auth0Sub) {
     const { rows } = await pool.query(
@@ -69,6 +71,57 @@ async function obtenerOCrearCuentaNessie(compradorId) {
     await pool.query(
         `UPDATE "Comprador" SET "NessieCustomerId" = $1, "NessieAccountId" = $2 WHERE id = $3`,
         [customerId, accountId, compradorId]
+    )
+
+    return accountId
+}
+
+// Un Vendedor no tiene identidad en Nessie hasta su primera venta - mismo
+// patron que obtenerOCrearCuentaNessie() para el Comprador, pero sobre la
+// tabla Vendedor.
+async function obtenerOCrearCuentaNessieVendedor(vendedorId) {
+    const { rows } = await pool.query(
+        `SELECT "NessieAccountId", "Nombre", "Apellidos" FROM "Vendedor" WHERE id = $1`,
+        [vendedorId]
+    )
+    const vendedor = rows[0]
+
+    if (!vendedor) {
+        const err = new Error('Vendedor no encontrado')
+        err.statusCode = 404
+        throw err
+    }
+
+    if (vendedor.NessieAccountId) {
+        return vendedor.NessieAccountId
+    }
+
+    const customerTexto = await nessie.create_customer({
+        first_name: vendedor.Nombre,
+        last_name: vendedor.Apellidos,
+        address: {
+            street_number: '0',
+            street_name: 'NA',
+            city: 'NA',
+            state: 'NA',
+            zip: '00000',
+        },
+    })
+    const customer = parsearRespuestaNessie(customerTexto, 'crear customer de vendedor')
+    const customerId = customer.objectCreated._id
+
+    const accountTexto = await nessie.create_account_for_customer(customerId, {
+        type: 'Checking',
+        nickname: 'Ventas Agrotec',
+        rewards: 0,
+        balance: 0,
+    })
+    const account = parsearRespuestaNessie(accountTexto, 'crear cuenta de vendedor')
+    const accountId = account.objectCreated._id
+
+    await pool.query(
+        `UPDATE "Vendedor" SET "NessieCustomerId" = $1, "NessieAccountId" = $2 WHERE id = $3`,
+        [customerId, accountId, vendedorId]
     )
 
     return accountId
@@ -142,20 +195,43 @@ export async function comprarProducto(auth0Sub, { Nombre_Producto, cantidad }) {
         client.release()
     }
 
-    const total = Number(producto.Precio) * cantidad
+    const subtotal = Number(producto.Precio) * cantidad
+    const impuesto = Math.round(subtotal * TASA_IMPUESTO * 100) / 100
+    const total = Math.round((subtotal + impuesto) * 100) / 100
     const accountId = await obtenerOCrearCuentaNessie(compradorId)
 
     const retiroTexto = await nessie.create_withdrawal_for_account(accountId, {
         medium: 'balance',
         amount: total,
-        description: `Compra: ${Nombre_Producto} x${cantidad}`,
+        description: `Compra: ${Nombre_Producto} x${cantidad} (incluye 3% impuesto Agrotec)`,
     })
     const retiro = parsearRespuestaNessie(retiroTexto, 'crear el retiro')
 
+    // Paga al Vendedor su parte de la venta (el subtotal, sin el 3% de
+    // impuesto Agrotec) depositandolo en su propia cuenta de Nessie -
+    // antes de esto, ningun Vendedor recibia dinero simulado por sus
+    // ventas. El "amount" de Deposit se trunca a dolares enteros en este
+    // sandbox (ver nessie-api.md), asi que se omite si redondea a $0.
+    const pagoVendedor = Math.round(subtotal)
+    if (pagoVendedor > 0) {
+        const cuentaVendedorId = await obtenerOCrearCuentaNessieVendedor(elegido.vendedor_id)
+        await nessie.create_deposit_for_account(cuentaVendedorId, {
+            medium: 'balance',
+            amount: pagoVendedor,
+            transaction_date: new Date().toISOString().slice(0, 10),
+            status: 'completed',
+            description: `Venta: ${Nombre_Producto} x${cantidad}`,
+        })
+    }
+
+    // El Bill de Nessie no tiene un campo propio para un desglose de
+    // impuesto - se codifica en el nickname (unico campo libre disponible)
+    // separado por "||" para que /api/facturas/:id lo pueda separar en
+    // subtotal/impuesto al mostrar el recibo.
     const facturaTexto = await nessie.create_bill_for_account(accountId, {
         status: 'completed',
         payee: 'Agrotec',
-        nickname: `${Nombre_Producto} x${cantidad}`,
+        nickname: `${Nombre_Producto} x${cantidad}||${subtotal.toFixed(2)}||${impuesto.toFixed(2)}`,
         payment_date: new Date().toISOString().slice(0, 10),
         payment_amount: total,
         // Required so Nessie can compute upcoming_payment_date at create
@@ -174,6 +250,8 @@ export async function comprarProducto(auth0Sub, { Nombre_Producto, cantidad }) {
             Nombre_Producto,
             cantidad,
             precioUnitario: Number(producto.Precio),
+            subtotal,
+            impuesto,
             total,
         },
         retiro: retiro.objectCreated,

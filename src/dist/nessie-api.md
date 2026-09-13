@@ -117,8 +117,17 @@ métodos de bajo nivel:
 | `update_transfer(transferId, transfer)` | `PUT /transfers/:id` | `transferId`, `transfer` | Actualiza una transferencia. |
 | `delete_transfer(transferId)` | `DELETE /transfers/:id` | `transferId` | Elimina una transferencia. |
 
-No hay `create_transfer` ni `get_transfers_for_account` todavía - la API de
-Nessie sí los soporta, pero no están implementados en este wrapper.
+No hay `create_transfer` ni `get_transfers_for_account` todavía. Se probó
+implementar `create_transfer_for_account`, pero el `TransferCreate` de este
+sandbox es estricto y no acepta ningún campo para indicar la cuenta
+destino (se probaron `medium` y `payee_id`, ambos rechazados como "extra
+fields not permitted"; los únicos campos que acepta son `transaction_date`,
+`status`, `amount` y `description`) - no sirve para mover dinero entre dos
+cuentas propias tal cual.
+
+Nota aparte: `Withdrawal`/`Deposit` también truncan `amount` a dólares
+enteros server-side (probado: enviar 7.55 devuelve `"amount": 7`), a
+diferencia de `Bill.payment_amount`, que sí guarda decimales reales.
 
 ## Purchases
 

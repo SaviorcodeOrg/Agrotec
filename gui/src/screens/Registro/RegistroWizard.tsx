@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/Textfield";
-import { Checkbox } from "../../components/Checkbox";
 import { useApiProtegida } from "../../hooks/useApiProtegida";
+import { usePerfil } from "../../hooks/usePerfil";
 import "./RegistroWizard.css";
 
 interface DatosRegistro {
@@ -19,7 +19,6 @@ interface DatosRegistro {
   Nombre_Negocio: string;
   Ubicaion_Aproximada: string;
   // Solo Comprador
-  A_Quien_Compro: string;
   Modalidad_De_Entrega: string;
 }
 
@@ -32,7 +31,6 @@ const datosIniciales: DatosRegistro = {
   Telefono: "",
   Nombre_Negocio: "",
   Ubicaion_Aproximada: "",
-  A_Quien_Compro: "",
   Modalidad_De_Entrega: "",
 };
 
@@ -52,6 +50,12 @@ export function RegistroWizard() {
   const [estado, setEstado] = useState<EstadoEnvio>("idle");
   const [errorMensaje, setErrorMensaje] = useState("");
   const navigate = useNavigate();
+  // Un Auth0Sub solo puede tener un Usuario (ver la constraint unica en la
+  // tabla Usuario) - si ya existe un perfil, mostrar el wizard llevaria a un
+  // "Failed to register usuario" confuso en vez de explicar que ya tiene
+  // cuenta.
+  const { usuario, cargando: revisandoPerfil } = usePerfil();
+  const yaRegistrado = usuario !== null;
 
   useEffect(() => {
     if (user?.email) {
@@ -101,7 +105,6 @@ export function RegistroWizard() {
       cuerpo.Nombre_Negocio = datos.Nombre_Negocio;
       cuerpo.Ubicaion_Aproximada = datos.Ubicaion_Aproximada;
     } else {
-      cuerpo.A_Quien_Compro = datos.A_Quien_Compro;
       cuerpo.Modalidad_De_Entrega = datos.Modalidad_De_Entrega;
     }
 
@@ -120,8 +123,27 @@ export function RegistroWizard() {
 
   const totalPasos = 4;
 
-  if (isLoading) {
+  if (isLoading || revisandoPerfil) {
     return <div className="wizard-fondo" />;
+  }
+
+  if (yaRegistrado) {
+    return (
+      <div className="wizard-fondo">
+        <div className="wizard-tarjeta-contenedor">
+          <div className="wizard-card">
+            <h1>Ya tienes una cuenta</h1>
+            <p className="wizard-subtitulo">
+              Este inicio de sesion ya esta registrado. Solo se permite una
+              cuenta de Vendedor o Comprador por inicio de sesion.
+            </p>
+            <div className="wizard-acciones">
+              <Button onPress={() => navigate("/Perfil")}>Ver mi perfil</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -174,21 +196,38 @@ export function RegistroWizard() {
             >
               <h1>¿Qué tipo de cuenta quieres crear?</h1>
               <p className="wizard-subtitulo">
-                Marca la casilla si eres Vendedor. Si la dejas sin marcar, tu
-                cuenta será de Comprador.
+                Elige uno. Solo puedes tener un tipo de cuenta por inicio de
+                sesion.
               </p>
 
-              <Checkbox
-                isSelected={datos.vendedor}
-                onChange={(seleccionado) => actualizar("vendedor", seleccionado)}
-              >
-                Quiero registrarme como Vendedor
-              </Checkbox>
-
-              <p className="wizard-tipo-resumen">
-                Tipo seleccionado:{" "}
-                <strong>{datos.vendedor ? "Vendedor" : "Comprador"}</strong>
-              </p>
+              <div className="wizard-tipo-selector" role="radiogroup">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={datos.vendedor}
+                  className={`wizard-tipo-opcion${datos.vendedor ? " wizard-tipo-opcion-activa" : ""}`}
+                  onClick={() => actualizar("vendedor", true)}
+                >
+                  <span className="wizard-tipo-opcion-check" aria-hidden="true" />
+                  <span className="wizard-tipo-opcion-titulo">Vendedor</span>
+                  <span className="wizard-tipo-opcion-desc">
+                    Quiero vender mis productos
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!datos.vendedor}
+                  className={`wizard-tipo-opcion${!datos.vendedor ? " wizard-tipo-opcion-activa" : ""}`}
+                  onClick={() => actualizar("vendedor", false)}
+                >
+                  <span className="wizard-tipo-opcion-check" aria-hidden="true" />
+                  <span className="wizard-tipo-opcion-titulo">Comprador</span>
+                  <span className="wizard-tipo-opcion-desc">
+                    Quiero comprar productos
+                  </span>
+                </button>
+              </div>
 
               <div className="wizard-acciones">
                 <Button onPress={siguiente}>Siguiente</Button>
@@ -212,7 +251,7 @@ export function RegistroWizard() {
               </p>
 
               <TextField
-                label="Username"
+                label="¿Cómo quieres que te llamen?"
                 placeholder="usuario123"
                 value={datos.Username}
                 onChange={(v) => actualizar("Username", v)}
@@ -248,7 +287,7 @@ export function RegistroWizard() {
 
               {!pasoValido && (
                 <p className="wizard-error-inline">
-                  Username, Nombre y Apellidos son obligatorios.
+                  Como quieres que te llamen, Nombre y Apellidos son obligatorios.
                 </p>
               )}
 
@@ -317,12 +356,6 @@ export function RegistroWizard() {
               </p>
 
               <TextField
-                label="¿A quién le compró?"
-                placeholder="Nombre del vendedor"
-                value={datos.A_Quien_Compro}
-                onChange={(v) => actualizar("A_Quien_Compro", v)}
-              />
-              <TextField
                 label="Modalidad de entrega"
                 placeholder="Entrega a domicilio"
                 value={datos.Modalidad_De_Entrega}
@@ -367,7 +400,7 @@ export function RegistroWizard() {
                   </p>
 
                   <ul className="wizard-resumen">
-                    <li>Username: {datos.Username}</li>
+                    <li>Como te llaman: {datos.Username}</li>
                     <li>
                       Nombre: {datos.Nombre} {datos.Apellidos}
                     </li>
@@ -379,10 +412,7 @@ export function RegistroWizard() {
                         <li>Ubicación: {datos.Ubicaion_Aproximada || "—"}</li>
                       </>
                     ) : (
-                      <>
-                        <li>Le compró a: {datos.A_Quien_Compro || "—"}</li>
-                        <li>Entrega: {datos.Modalidad_De_Entrega || "—"}</li>
-                      </>
+                      <li>Entrega: {datos.Modalidad_De_Entrega || "—"}</li>
                     )}
                   </ul>
 

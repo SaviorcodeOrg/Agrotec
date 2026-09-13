@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS "Vendedor" (
     "Ubicaion_Aproximada" text,
     "Ultima_Venta" timestamptz,
     "Calificacion" numeric,
-    "Dificultad" numeric NOT NULL DEFAULT 0
+    "Dificultad" numeric NOT NULL DEFAULT 0,
+    "NessieCustomerId" text,
+    "NessieAccountId" text
 );
 
 CREATE TABLE IF NOT EXISTS "Comprador" (

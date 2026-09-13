@@ -11,6 +11,7 @@ import { Perfil } from './screens/Perfil/Perfil'
 import { AnimatePresence, motion } from 'motion/react'
 import { PageTransition } from './components/PageTransition'
 import { HomeIcon,ShoppingCart,CoinsIcon,TelescopeIcon } from 'lucide-react'
+import { usePerfil } from './hooks/usePerfil'
 // Envuelve Auth0Provider aqui (dentro de BrowserRouter, no en main.tsx) para
 // que onRedirectCallback pueda usar useNavigate y volver a la pagina donde
 // el usuario estaba (ej. /CrearCuenta) en vez de siempre mandarlo a "/".
@@ -73,6 +74,33 @@ function AppRoutes() {
   );
 }
 
+// Solo muestra el link de Vender/Comprar que corresponde al tipo de cuenta
+// ya registrado - mientras no se sepa el tipo (sin cuenta, sin login, o
+// todavia cargando) se muestran ambos para no esconder navegacion util.
+function EnlacesCuenta() {
+  const { isAuthenticated } = useAuth0()
+  const { usuario, noRegistrado, cargando } = usePerfil()
+
+  const tipoConocido = isAuthenticated && !cargando && !noRegistrado && usuario !== null
+  const mostrarComprar = !tipoConocido || Boolean(usuario?.ID_comprador)
+  const mostrarVender = !tipoConocido || Boolean(usuario?.id_Vendedor)
+
+  return (
+    <>
+      {mostrarComprar && (
+        <motion.span variants={navItemVariants}>
+          <Link to='/Catalogo' className="nav-link"><ShoppingCart></ShoppingCart>Comprar</Link>
+        </motion.span>
+      )}
+      {mostrarVender && (
+        <motion.span variants={navItemVariants}>
+          <Link to='/Vender' className="nav-link"><CoinsIcon></CoinsIcon>Vender</Link>
+        </motion.span>
+      )}
+    </>
+  )
+}
+
 function BotonSesion() {
   const { isAuthenticated, isLoading, loginWithRedirect, logout, user } = useAuth0()
 
@@ -111,12 +139,7 @@ return(
     <motion.span variants={navItemVariants}>
       <Link to='/VerMas' className="nav-link"><TelescopeIcon></TelescopeIcon>Ver mas</Link>
     </motion.span>
-    <motion.span variants={navItemVariants}>
-      <Link to='/Catalogo' className="nav-link"><ShoppingCart></ShoppingCart>Comprar</Link>
-    </motion.span>
-    <motion.span variants={navItemVariants}>
-      <Link to='/Vender' className="nav-link"><CoinsIcon></CoinsIcon>Vender</Link>
-    </motion.span>
+    <EnlacesCuenta />
     <motion.span variants={navItemVariants}>
       <BotonSesion />
     </motion.span>

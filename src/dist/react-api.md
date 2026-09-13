@@ -297,12 +297,28 @@ Es el endpoint que ata todo el flujo:
 2. Descuenta el stock de ese `Producto` específico y actualiza
    `Ultima_Venta` del Vendedor (para que la próxima compra ya lo tome en
    cuenta en la rotación).
-3. Si el Comprador no tiene todavía una cuenta en Nessie, se le crea una
+3. Calcula un 3% de impuesto Agrotec sobre el subtotal (`impuesto`,
+   redondeado a 2 decimales) y lo suma al `total` que se le cobra al
+   Comprador - ver "Impuesto Agrotec" más abajo.
+4. Si el Comprador no tiene todavía una cuenta en Nessie, se le crea una
    automáticamente (customer + cuenta Checking con $1000 de saldo inicial)
    la primera vez que compra algo.
-4. Le hace un **withdrawal** real en Nessie por el monto total - así es
-   como "se le resta el dinero" al comprador.
-5. Crea un **Bill** real en Nessie como factura/recibo de la compra.
+5. Le hace un **withdrawal** real en Nessie por el `total` (subtotal +
+   impuesto) - así es como "se le resta el dinero" al comprador.
+6. Paga al Vendedor su parte (el `subtotal`, sin el impuesto) con un
+   **deposit** real en su propia cuenta de Nessie - se le crea una cuenta
+   (customer + Checking) la primera vez que vende algo, igual que al
+   Comprador.
+7. Crea un **Bill** real en Nessie como factura/recibo de la compra, con
+   el desglose subtotal/impuesto codificado en el `nickname` (ver
+   `GET /api/facturas/:id` más abajo).
+
+> ⚠️ Nessie trunca `Withdrawal`/`Deposit.amount` a dólares enteros en este
+> sandbox (probado: enviar `7.55` devuelve `"amount": 7`) - por eso el pago
+> al Vendedor se redondea antes de mandarse, y se omite por completo si
+> redondea a `$0`. El `Bill.payment_amount` sí guarda decimales reales, así
+> que el total mostrado en el recibo es exacto aunque el movimiento de
+> dinero de fondo esté en dólares enteros.
 
 ### Cuerpo de la petición (JSON)
 
@@ -320,12 +336,14 @@ Es el endpoint que ata todo el flujo:
     "Nombre_Producto": "Aguacate",
     "cantidad": 1,
     "precioUnitario": 45,
-    "total": 45
+    "subtotal": 45,
+    "impuesto": 1.35,
+    "total": 46.35
   },
   "retiro": {
     "_id": "4faa2545-ced1-4c9a-9203-55587a9fae2c",
-    "amount": 45,
-    "description": "Compra: Aguacate x1"
+    "amount": 46.35,
+    "description": "Compra: Aguacate x1 (incluye 3% impuesto Agrotec)"
   },
   "factura": {
     "id": "3b15c0d7-4188-4601-85ef-149593b837df",
@@ -335,7 +353,8 @@ Es el endpoint que ata todo el flujo:
 ```
 
 `factura.url` es una ruta relativa - añade la URL base del backend para
-tener el link completo y compartible.
+tener el link completo y compartible. La factura HTML en esa URL muestra
+el desglose de Subtotal / Impuesto Agrotec (3%) / Total.
 
 ### Errores comunes
 
