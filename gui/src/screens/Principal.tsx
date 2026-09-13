@@ -17,7 +17,7 @@ export default function Principal() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 1.5 }}
       >
-        <img src={campoimg} width={400} height={800} alt="" id="introImg"></img>
+        <img src={campoimg} width={400} height={400} alt="" id="introImg"></img>
         <motion.p
           id="Textointroductorio"
           initial={{ opacity: 0 }}
@@ -35,9 +35,9 @@ export default function Principal() {
       </motion.div>
       <motion.div
         initial={{ opacity: 0, y: 50 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, amount: 0.3 }}
-        transition={{ duration: 1.5 }}
+        animate={{ opacity: 1, y: 0 }}
+      
+        transition={{ duration: 3 }}
       >
         <Button
           style={{ width: 200, height: 70, margin: 100 }}
@@ -46,7 +46,7 @@ export default function Principal() {
           Continuar{" "}
         </Button>
       </motion.div>
-      <footer>Agrotec</footer>
+  
     </>
   );
 }

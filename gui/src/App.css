@@ -22,3 +22,11 @@ text-shadow: 2px 2px 2px #16d939;
 .nav-link:hover{
   color: chartreuse;
 }
+button{
+  background-color: rgb(12, 204, 44);
+  border: 2px green solid;
+}
+button:hover{
+  scale:1.1;
+  background-color: #164e20;
+}

@@ -9,7 +9,7 @@ import { GaleriaVenta } from './screens/Vendedor/GaleriaVenta'
 import { Catalogo } from './screens/Catalogo/Catalogo'
 import { Perfil } from './screens/Perfil/Perfil'
 import { motion } from 'motion/react'
-
+import { HomeIcon,ShoppingCart,CoinsIcon,TelescopeIcon } from 'lucide-react'
 // Envuelve Auth0Provider aqui (dentro de BrowserRouter, no en main.tsx) para
 // que onRedirectCallback pueda usar useNavigate y volver a la pagina donde
 // el usuario estaba (ej. /CrearCuenta) en vez de siempre mandarlo a "/".
@@ -55,7 +55,7 @@ function BotonSesion() {
       <>
         <Link to="/Perfil" className="nav-link">{user?.email}</Link>
         <button
-          className="nav-link"
+          className="nav-link-button"
           onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
         >
           Cerrar sesion
@@ -77,10 +77,10 @@ return(
   <BrowserRouter>
   <Auth0ProviderConNavegacion>
   <motion.nav>
-<Link to= '/'  className="nav-link">Regresar a Inicio </Link>
-<Link to='/VerMas' className="nav-link">Ver mas</Link>
-<Link to='/Catalogo' className="nav-link">Comprar</Link>
-<Link to='/Vender' className="nav-link">Vender</Link>
+<Link to= '/'  className="nav-link"><HomeIcon>Regresar a Inicio</HomeIcon> </Link>
+<Link to='/VerMas' className="nav-link"><TelescopeIcon></TelescopeIcon>Ver mas</Link>
+<Link to='/Catalogo' className="nav-link"><ShoppingCart></ShoppingCart>Comprar</Link>
+<Link to='/Vender' className="nav-link"><CoinsIcon></CoinsIcon>Vender</Link>
 <BotonSesion />
   </motion.nav>
   <Routes>
