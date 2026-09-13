@@ -16,6 +16,9 @@ logs/
 .vscode/
 .idea/
 
+# Claude Code's own local state (session locks, etc.) - not part of the project
+.claude/
+
 # Docker Compose override you might create locally
 docker-compose.override.yml
 

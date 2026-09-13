@@ -7,6 +7,7 @@ import nessie from './nessieisreal.js'
 import { registerUsuario } from './registerUsuario.js'
 import { elegirVendedor } from './elegirVendedor.js'
 import { registrarProducto, obtenerMisProductos, obtenerCatalogo } from './productos.js'
+import { sugerirPrecio } from './sugerenciaPrecio.js'
 import { comprarProducto } from './comprar.js'
 import { checkJwt } from './auth0.js'
 import pool from './db.js'
@@ -195,6 +196,26 @@ function main(){
         try {
             const producto = await registrarProducto(req.auth.payload.sub, req.body)
             res.status(201).json(producto)
+        } catch (err) {
+            console.error(err)
+            res.status(err.statusCode || 500).json({ error: err.message })
+        }
+    })
+
+    // Asistente financiero: usa Gemini con busqueda de Google (grounding)
+    // para investigar precios reales de mercado en Mexico y sugerir un
+    // precio de venta - se usa desde la pagina de registrar producto, antes
+    // de que el Vendedor decida su Precio.
+    api.post('/sugerir-precio', checkJwt, async (req, res) => {
+        const { Nombre_Producto, Descripcion } = req.body
+
+        if (!Nombre_Producto) {
+            return res.status(400).json({ error: 'Nombre_Producto is required' })
+        }
+
+        try {
+            const sugerencia = await sugerirPrecio(Nombre_Producto, Descripcion)
+            res.json(sugerencia)
         } catch (err) {
             console.error(err)
             res.status(err.statusCode || 500).json({ error: err.message })

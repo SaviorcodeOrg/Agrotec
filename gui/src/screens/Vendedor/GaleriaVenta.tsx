@@ -18,6 +18,12 @@ interface Producto {
   Foto_Producto_URL: string | null;
 }
 
+interface SugerenciaPrecio {
+  precioSugerido: number;
+  justificacion: string;
+  fuentes: { titulo: string; url: string }[];
+}
+
 const gridVariants: Variants = {
   hidden: {},
   show: { transition: { staggerChildren: 0.06 } },
@@ -47,6 +53,9 @@ export function GaleriaVenta() {
   const [formulario, setFormulario] = useState(formularioInicial);
   const [enviando, setEnviando] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState("");
+  const [sugerencia, setSugerencia] = useState<SugerenciaPrecio | null>(null);
+  const [cargandoSugerencia, setCargandoSugerencia] = useState(false);
+  const [errorSugerencia, setErrorSugerencia] = useState("");
 
   const cargarProductos = useCallback(async () => {
     setError("");
@@ -66,6 +75,31 @@ export function GaleriaVenta() {
 
   function actualizarCampo(campo: keyof typeof formularioInicial, valor: string) {
     setFormulario((prev) => ({ ...prev, [campo]: valor }));
+  }
+
+  // Asistente financiero con IA: le pide a Gemini que busque precios reales
+  // de mercado en Mexico (ver /api/sugerir-precio) a partir del nombre y
+  // descripcion que el Vendedor ya escribio, para ayudarlo a poner un
+  // precio competitivo sin tener que investigar el mismo.
+  async function sugerirPrecioIA() {
+    setCargandoSugerencia(true);
+    setErrorSugerencia("");
+    setSugerencia(null);
+
+    try {
+      const data = await llamar("/api/sugerir-precio", {
+        method: "POST",
+        body: JSON.stringify({
+          Nombre_Producto: formulario.Nombre_Producto,
+          Descripcion: formulario.Descripcion || null,
+        }),
+      });
+      setSugerencia(data);
+    } catch (err) {
+      setErrorSugerencia(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setCargandoSugerencia(false);
+    }
   }
 
   async function registrarProducto() {
@@ -89,6 +123,7 @@ export function GaleriaVenta() {
       });
 
       setFormulario(formularioInicial);
+      setSugerencia(null);
       setMostrarFormulario(false);
       await cargarProductos();
     } catch (err) {
@@ -160,6 +195,55 @@ export function GaleriaVenta() {
               onChange={(v) => actualizarCampo("Nombre_Producto", v)}
               isRequired
             />
+            <TextArea
+              label="Descripcion (opcional)"
+              placeholder="Tomate rojo fresco, cosechado esta semana"
+              value={formulario.Descripcion}
+              onChange={(v) => actualizarCampo("Descripcion", v)}
+            />
+
+            <div className="sugerencia-precio">
+              <Button
+                variant="secondary"
+                onPress={sugerirPrecioIA}
+                isDisabled={!formulario.Nombre_Producto || cargandoSugerencia}
+              >
+                {cargandoSugerencia ? "Consultando precios..." : "Sugerir precio con IA"}
+              </Button>
+
+              {errorSugerencia && (
+                <p className="wizard-error-inline">{errorSugerencia}</p>
+              )}
+
+              {sugerencia && (
+                <div className="sugerencia-resultado">
+                  <p className="sugerencia-precio-valor">
+                    Precio sugerido: ${sugerencia.precioSugerido} MXN
+                  </p>
+                  <p className="sugerencia-justificacion">{sugerencia.justificacion}</p>
+                  {sugerencia.fuentes.length > 0 && (
+                    <ul className="sugerencia-fuentes">
+                      {sugerencia.fuentes.map((fuente, i) => (
+                        <li key={i}>
+                          <a href={fuente.url} target="_blank" rel="noreferrer">
+                            {fuente.titulo || fuente.url}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <Button
+                    variant="secondary"
+                    onPress={() =>
+                      actualizarCampo("Precio", String(sugerencia.precioSugerido))
+                    }
+                  >
+                    Usar este precio
+                  </Button>
+                </div>
+              )}
+            </div>
+
             <TextField
               label="Precio"
               type="number"
@@ -188,12 +272,6 @@ export function GaleriaVenta() {
               placeholder="1 kg"
               value={formulario.MInimo_De_Compra}
               onChange={(v) => actualizarCampo("MInimo_De_Compra", v)}
-            />
-            <TextArea
-              label="Descripcion (opcional)"
-              placeholder="Tomate rojo fresco, cosechado esta semana"
-              value={formulario.Descripcion}
-              onChange={(v) => actualizarCampo("Descripcion", v)}
             />
             <TextField
               label="URL de foto (opcional)"

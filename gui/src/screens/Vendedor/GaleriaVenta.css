@@ -97,3 +97,40 @@
   text-align: center;
   opacity: 0.7;
 }
+
+.sugerencia-precio {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sugerencia-resultado {
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sugerencia-precio-valor {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.sugerencia-justificacion {
+  margin: 0;
+  font-size: 14px;
+  line-height: 145%;
+  white-space: pre-line;
+}
+
+.sugerencia-fuentes {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  opacity: 0.85;
+}
