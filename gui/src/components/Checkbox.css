@@ -31,11 +31,20 @@
     height: calc(var(--spacing) * 4.5);
     box-sizing: border-box;
     border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid var(--border-color);
+    backdrop-filter: blur(6px);
     transition: all 200ms;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+  }
+
+  &[data-selected] .indicator,
+  &[data-indeterminate] .indicator {
+    background: var(--highlight-background);
+    border-color: var(--highlight-background);
   }
 
   svg {

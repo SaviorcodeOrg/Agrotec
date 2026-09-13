@@ -2,7 +2,9 @@
 .react-aria-DropZone {
   color: var(--text-color);
   background: var(--overlay-background);
-  border: 1px solid var(--border-color);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px dashed var(--border-color);
   forced-color-adjust: none;
   border-radius: var(--radius);
   appearance: none;

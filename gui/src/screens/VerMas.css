@@ -1,0 +1,79 @@
+/* Adaptado del efecto de tarjeta brillante de Uiverse.io by Daniel1227k */
+.Vermas {
+  position: relative;
+  max-width: 640px;
+  width: 100%;
+  margin: 48px auto;
+  padding: 6px;
+  border-radius: 16px;
+}
+
+.Vermas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: 16px;
+  background: linear-gradient(315deg, #0a5c1f, #16d939, #7cfc9a);
+  background-size: 200% 200%;
+  animation: VermasGradient 6s ease infinite;
+}
+
+.Vermas::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: 16px;
+  background: linear-gradient(315deg, #0a5c1f, #16d939, #7cfc9a);
+  background-size: 200% 200%;
+  animation: VermasGradient 6s ease infinite;
+  filter: blur(30px);
+  opacity: 0.8;
+  transition: opacity 0.5s, filter 0.5s;
+}
+
+.Vermas:hover::after {
+  opacity: 1;
+  filter: blur(40px);
+}
+
+@keyframes VermasGradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.Vermas-content {
+  position: relative;
+  z-index: 2;
+  background: rgba(5, 22, 11, 0.88);
+  border-radius: 12px;
+  padding: 36px 32px;
+  color: #eafff0;
+}
+
+.Vermas-content h1,
+.Vermas-content h2 {
+  color: #7cfc9a;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.Vermas-content p {
+  color: #eafff0;
+  line-height: 1.5em;
+}
+
+.Vermas-content ul {
+  padding-left: 1.2em;
+}
+
+.Vermas-content li {
+  margin-bottom: 6px;
+}

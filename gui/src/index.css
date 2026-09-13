@@ -1,15 +1,65 @@
 :root {
-  --text: #000000;
-  --text-h: #32303a;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #34a81d;
-  --accent-bg: rgba(225, 205, 240, 0.1);
-  --accent-border: rgba(22, 99, 57, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
+  --text: #0d2b18;
+  --text-h: #123a1e;
+  --bg: #eafff2;
+  --border: rgba(20, 120, 60, 0.22);
+  --code-bg: rgba(255, 255, 255, 0.4);
+  --accent: #1fae4c;
+  --accent-bg: rgba(31, 174, 76, 0.12);
+  --accent-border: rgba(15, 110, 45, 0.4);
+  --social-bg: rgba(255, 255, 255, 0.4);
   --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+    rgba(13, 80, 35, 0.16) 0 10px 30px -8px,
+    rgba(13, 80, 35, 0.07) 0 4px 10px -2px;
+
+  /* Superficies glassmorphism */
+  --glass-bg: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.55),
+    rgba(198, 255, 214, 0.25)
+  );
+  --glass-bg-strong: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.65),
+    rgba(198, 255, 214, 0.35)
+  );
+  --glass-border: rgba(255, 255, 255, 0.45);
+  --glass-shadow: 0 8px 32px rgba(13, 80, 35, 0.18);
+  --glass-blur: blur(18px) saturate(160%);
+
+  /* Tokens usados por react-aria-components */
+  --spacing: 4px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --radius-sm: 8px;
+  --radius: 14px;
+  --font-size-sm: 14px;
+  --font-size: 16px;
+  --font-size-lg: 18px;
+
+  --text-color: var(--text);
+  --text-color-hover: #0a7a34;
+  --text-color-disabled: rgba(13, 43, 22, 0.35);
+  --border-color: rgba(20, 120, 60, 0.28);
+  --focus-ring-color: #1fae4c;
+  --invalid-color: #c0392b;
+  --overlay-background: rgba(255, 255, 255, 0.55);
+  --field-background: rgba(255, 255, 255, 0.55);
+  --highlight-background: #1fae4c;
+  --highlight-foreground: #ffffff;
+  --highlight-overlay: rgba(31, 174, 76, 0.15);
+  --tint-200: rgba(31, 174, 76, 0.12);
+  --tint-300: rgba(31, 174, 76, 0.22);
+  --tint-1200: #0a7a34;
+  --tint-1400: #123a1e;
+  --gray-100: rgba(255, 255, 255, 0.5);
+  --gray-200: rgba(20, 120, 60, 0.08);
+  --gray-400: rgba(20, 120, 60, 0.2);
+  --gray-1600: #123a1e;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -17,9 +67,8 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
-  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -30,22 +79,60 @@
   }
 }
 
+html {
+  min-height: 100%;
+}
 
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(159, 255, 190, 0.55), transparent 55%),
+    radial-gradient(circle at 85% 75%, rgba(120, 230, 170, 0.45), transparent 55%),
+    linear-gradient(135deg, #eafff2 0%, #d3f7e0 35%, #bdf2cf 70%, #eafff2 100%);
+  background-size: 200% 200%, 200% 200%, 300% 300%;
+  background-attachment: fixed;
+  animation: fondoAgrotec 24s ease-in-out infinite;
+}
+
+@keyframes fondoAgrotec {
+  0% {
+    background-position: 0% 0%, 100% 100%, 0% 50%;
+  }
+  50% {
+    background-position: 100% 100%, 0% 0%, 100% 50%;
+  }
+  100% {
+    background-position: 0% 0%, 100% 100%, 0% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    animation: none;
+  }
+}
 
 #root {
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
   text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
 
-body {
-  margin: 0;
+/* Utilidad de vidrio reutilizable para tarjetas y paneles */
+.glass {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 h1,

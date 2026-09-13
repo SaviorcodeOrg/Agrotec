@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion, type Variants } from "motion/react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Button } from "../../components/Button";
 import { TextField, TextArea } from "../../components/Textfield";
@@ -16,6 +17,16 @@ interface Producto {
   MInimo_De_Compra: string | null;
   Foto_Producto_URL: string | null;
 }
+
+const gridVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+};
 
 const formularioInicial = {
   Nombre_Producto: "",
@@ -125,8 +136,16 @@ export function GaleriaVenta() {
         </Button>
       </div>
 
+      <AnimatePresence>
       {mostrarFormulario && (
-        <div className="wizard-tarjeta-contenedor" style={{ margin: "0 auto 32px" }}>
+        <motion.div
+          className="wizard-tarjeta-contenedor"
+          style={{ margin: "0 auto 32px" }}
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
+        >
           <div className="wizard-card">
             <h1>Registrar producto</h1>
             <p className="wizard-subtitulo">
@@ -201,8 +220,9 @@ export function GaleriaVenta() {
               </Button>
             </div>
           </div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {error && <p className="wizard-error-inline">{error}</p>}
 
@@ -212,9 +232,14 @@ export function GaleriaVenta() {
         </p>
       )}
 
-      <div className="galeria-grid">
+      <motion.div className="galeria-grid" variants={gridVariants} initial="hidden" animate="show">
         {productos?.map((producto) => (
-          <div className="producto-card" key={producto.id}>
+          <motion.div
+            className="producto-card"
+            key={producto.id}
+            variants={cardVariants}
+            whileHover={{ y: -4 }}
+          >
             {producto.Foto_Producto_URL ? (
               <img
                 className="producto-imagen"
@@ -235,9 +260,9 @@ export function GaleriaVenta() {
                 <span className="producto-agotado">Agotado</span>
               )}
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }

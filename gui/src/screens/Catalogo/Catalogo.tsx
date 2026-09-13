@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion, type Variants } from "motion/react";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Button } from "../../components/Button";
 import { llamarApi } from "../../lib/api";
@@ -17,6 +18,16 @@ interface ProductoCatalogo {
 }
 
 type ResultadoCompra = { total: number; facturaUrl: string } | string;
+
+const gridVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
+
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+};
 
 export function Catalogo() {
   const { isAuthenticated, loginWithRedirect } = useAuth0();
@@ -90,12 +101,17 @@ export function Catalogo() {
         </p>
       )}
 
-      <div className="galeria-grid">
+      <motion.div className="galeria-grid" variants={gridVariants} initial="hidden" animate="show">
         {productos?.map((producto) => {
           const resultado = resultados[producto.Nombre_Producto];
 
           return (
-            <div className="producto-card" key={producto.Nombre_Producto}>
+            <motion.div
+              className="producto-card"
+              key={producto.Nombre_Producto}
+              variants={cardVariants}
+              whileHover={{ y: -4 }}
+            >
               {producto.Foto_Producto_URL ? (
                 <img
                   className="producto-imagen"
@@ -138,10 +154,10 @@ export function Catalogo() {
                   </p>
                 )}
               </div>
-            </div>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }

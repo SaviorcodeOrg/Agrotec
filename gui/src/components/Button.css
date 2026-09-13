@@ -6,7 +6,7 @@
   font-weight: 500;
   margin: 0;
   height: var(--spacing-8);
-  padding: 0 var(--spacing-3);
+  padding: 0 var(--spacing-4);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -14,16 +14,38 @@
   gap: var(--spacing-1);
   -webkit-tap-highlight-color: transparent;
   margin-top: 10px;
-  background: #1b8031;
+  color: white;
   background: linear-gradient(
-    90deg,
-    rgba(27, 128, 49, 1) 0%,
-    rgba(51, 201, 40, 1) 39%,
-    rgba(36, 196, 27, 1) 100%
+    135deg,
+    rgba(31, 174, 76, 0.9) 0%,
+    rgba(15, 110, 45, 0.9) 100%
   );
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 4px 14px rgba(13, 80, 35, 0.25);
   width: fit-content;
-  border-radius: 15%;
-  border: 3px solid green;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+
+  &[data-hovered] {
+    box-shadow: 0 6px 18px rgba(13, 80, 35, 0.32);
+    transform: translateY(-1px);
+  }
+
+  &[data-variant="secondary"] {
+    background: rgba(255, 255, 255, 0.35);
+    color: var(--text-h);
+    border: 1px solid var(--glass-border);
+  }
+
+  &[data-variant="quiet"] {
+    background: transparent;
+    box-shadow: none;
+    border: 1px solid transparent;
+    color: var(--text-h);
+  }
+
   > svg {
     width: calc(var(--spacing) * 4.5);
     height: calc(var(--spacing) * 4.5);
@@ -38,6 +60,13 @@
 
   &[data-pressed] {
     scale: 0.95;
+    transform: translateY(0);
+  }
+
+  &[data-disabled] {
+    opacity: 0.5;
+    cursor: default;
+    box-shadow: none;
   }
 
   .react-aria-ProgressBar {

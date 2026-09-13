@@ -249,6 +249,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.gui
+    env_file:
+      - .env
+    environment:
+      # Vite only exposes client-side env vars prefixed VITE_ - map the
+      # backend's Auth0 vars (see src/src/auth0.js) to that naming so the
+      # frontend logs into the same tenant/application the API verifies
+      # tokens against.
+      VITE_AUTH0_DOMAIN: ${AUTH0_DOMAIN}
+      VITE_AUTH0_CLIENT_ID: ${AUTH0_Client_ID}
+      VITE_AUTH0_AUDIENCE: ${AUTH0_AUDIENCE}
     volumes:
       # Bind-mount so the cloned repo is visible on the host, in its own
       # folder - kept separate from the backend's ./src on purpose.

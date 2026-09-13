@@ -1,5 +1,5 @@
 import './App.css'
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react'
 import type { ReactNode } from 'react'
 import Principal from './screens/Principal'
@@ -8,7 +8,8 @@ import { CrearCuenta} from './screens/CrearCuenta'
 import { GaleriaVenta } from './screens/Vendedor/GaleriaVenta'
 import { Catalogo } from './screens/Catalogo/Catalogo'
 import { Perfil } from './screens/Perfil/Perfil'
-import { motion } from 'motion/react'
+import { AnimatePresence, motion } from 'motion/react'
+import { PageTransition } from './components/PageTransition'
 import { HomeIcon,ShoppingCart,CoinsIcon,TelescopeIcon } from 'lucide-react'
 // Envuelve Auth0Provider aqui (dentro de BrowserRouter, no en main.tsx) para
 // que onRedirectCallback pueda usar useNavigate y volver a la pagina donde
@@ -18,11 +19,11 @@ function Auth0ProviderConNavegacion({ children }: { children: ReactNode }) {
 
   return (
     <Auth0Provider
-      domain="dev-sebkdm5n60dmbfjm.us.auth0.com"
-      clientId="HtrLvS56mkueOr8n2UWkWrrW6JaSmyB6"
+      domain={import.meta.env.VITE_AUTH0_DOMAIN}
+      clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
       authorizationParams={{
         redirect_uri: window.location.origin,
-        audience: "https://agrotecapi.saviorcode.com/",
+        audience: import.meta.env.VITE_AUTH0_AUDIENCE,
       }}
       // Default (in-memory) cache needs a cross-origin iframe silent-auth
       // check on every fresh page load to know if the user's still logged
@@ -43,6 +44,33 @@ function Auth0ProviderConNavegacion({ children }: { children: ReactNode }) {
       {children}
     </Auth0Provider>
   )
+}
+
+const navVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
+};
+
+const navItemVariants = {
+  hidden: { opacity: 0, y: -12 },
+  show: { opacity: 1, y: 0 },
+};
+
+function AppRoutes() {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path='/CrearCuenta' element={<PageTransition><CrearCuenta/></PageTransition>}/>
+        <Route path="/" element={<PageTransition><Principal /></PageTransition>}/>
+        <Route path="/VerMas" element={<PageTransition><VerMas/></PageTransition>}/>
+        <Route path="/Vender" element={<PageTransition><GaleriaVenta/></PageTransition>}/>
+        <Route path="/Catalogo" element={<PageTransition><Catalogo/></PageTransition>}/>
+        <Route path="/Perfil" element={<PageTransition><Perfil/></PageTransition>}/>
+      </Routes>
+    </AnimatePresence>
+  );
 }
 
 function BotonSesion() {
@@ -76,21 +104,24 @@ export default function App(){
 return(
   <BrowserRouter>
   <Auth0ProviderConNavegacion>
-  <motion.nav>
-<Link to= '/'  className="nav-link"><HomeIcon>Regresar a Inicio</HomeIcon> </Link>
-<Link to='/VerMas' className="nav-link"><TelescopeIcon></TelescopeIcon>Ver mas</Link>
-<Link to='/Catalogo' className="nav-link"><ShoppingCart></ShoppingCart>Comprar</Link>
-<Link to='/Vender' className="nav-link"><CoinsIcon></CoinsIcon>Vender</Link>
-<BotonSesion />
+  <motion.nav variants={navVariants} initial="hidden" animate="show">
+    <motion.span variants={navItemVariants}>
+      <Link to='/' className="nav-link"><HomeIcon>Regresar a Inicio</HomeIcon> </Link>
+    </motion.span>
+    <motion.span variants={navItemVariants}>
+      <Link to='/VerMas' className="nav-link"><TelescopeIcon></TelescopeIcon>Ver mas</Link>
+    </motion.span>
+    <motion.span variants={navItemVariants}>
+      <Link to='/Catalogo' className="nav-link"><ShoppingCart></ShoppingCart>Comprar</Link>
+    </motion.span>
+    <motion.span variants={navItemVariants}>
+      <Link to='/Vender' className="nav-link"><CoinsIcon></CoinsIcon>Vender</Link>
+    </motion.span>
+    <motion.span variants={navItemVariants}>
+      <BotonSesion />
+    </motion.span>
   </motion.nav>
-  <Routes>
-    <Route path='/CrearCuenta' element={<CrearCuenta/>}/>
-    <Route path="/" element={<Principal />}/>
-    <Route path="/VerMas" element={<VerMas/>}/>
-    <Route path="/Vender" element={<GaleriaVenta/>}/>
-    <Route path="/Catalogo" element={<Catalogo/>}/>
-    <Route path="/Perfil" element={<Perfil/>}/>
-  </Routes>
+  <AppRoutes />
   </Auth0ProviderConNavegacion>
   </BrowserRouter>
 )

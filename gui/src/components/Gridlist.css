@@ -129,18 +129,25 @@
   font: var(--font-size) system-ui;
   box-sizing: border-box;
   padding-bottom: var(--spacing-4);
-  background: var(--overlay-background);
-  box-shadow: 0 2px 8px rgba(15, 196, 60, 0.507);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-shadow);
   min-width: 0;
   max-width: 250px;
   overflow: clip;
   position: relative;
   transform: translateZ(0);
-  transition-property: scale;
+  transition-property: scale, box-shadow, transform;
   transition-duration: 200ms;
   -webkit-tap-highlight-color: transparent;
-border:4px green;
-margin: 5px;
+  border: 1px solid var(--glass-border);
+  margin: 5px;
+
+  &[data-hovered] {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 36px rgba(13, 80, 35, 0.22);
+  }
   &[data-focus-visible] {
     outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
